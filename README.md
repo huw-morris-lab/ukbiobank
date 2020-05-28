@@ -14,7 +14,9 @@ or
 ```
 ./ukbconv ukb23456.enc_ukb r
 ```
-The r format makes a .tab file and then a separate R script to code 
+The r format makes a .tab file and then a separate R script to recode all the categorical variables.
+
+If making a csv file, note that the Data-Codings will be retained rather than replaced by their meanings.
 
 
 Make data dictionary.
