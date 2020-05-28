@@ -1,8 +1,18 @@
 # ukbiobank
 Pipeline for processing UK biobank clinical data
 
+Date: May 2020
 
-1. Convert dataset
+Last updated: 28/05/2020
+
+Authors: Manuela Tan
+
+## General description and purpose
+
+This covers cleaning UK Biobank clinical data and pulling PD cases. 
+
+
+# 1. Convert dataset
 
 Convert dataset from .enc_ukb format to a workable format for R. Replace the file name with whatever your key is.
 
