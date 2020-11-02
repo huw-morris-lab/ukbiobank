@@ -1,4 +1,11 @@
-Survival GWAS in UK Biobank
+# ukbiobank_PDsurvivalGWAS
+Scripts for running PD progression GWAS of mortality in UKB.
+
+Date: Nov 2020
+
+Last updated: 01/11/2020
+
+Authors: Manuela Tan
 
 # 1. Process clinical data
 
