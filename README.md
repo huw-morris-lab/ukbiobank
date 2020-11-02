@@ -114,19 +114,21 @@ According to UK Biobank, this data should be replicated in the main dataset but 
 Further information on how to download mortality data is available in the UK Biobank access guides
 https://biobank.ndph.ox.ac.uk/showcase/showcase/docs/DeathLinkage.pdf
 
-You can also use SQL to query these tables:
+To access the Data Portal
 * When downloading the data, go to the Data Portal tab 
 * Connect to Record Repository
 
-Here I just downloaded the whole tables.
+You can use SQL to query the tables, or just download the entire tables.
+
+To get the full unique link, go to the Table Download tab and enter the name of the table you want. This will generate the wget commands like the ones below.
 
 Download DEATH table
 ```
-wget -nd -Odeath_cause.txt https://biota.ndph.ox.ac.uk/tabserv.cgi?x=1b27d4c5fbfe2d81b0b0ddf0bf85a5feWzQmaSN0PTE1OTIwNjc3NzMmcyNkPWRlYXRoX2NhdXNlJmkjYT00NjQ1MCZpI3I9MTA0NjA3XQ==
+wget -nd -Odeath_cause.txt https://biota.ndph.ox.ac.uk/XXXXXX
 ```
 
 Download DEATH_CAUSE table
 ```
-wget -nd -Odeath.txt https://biota.ndph.ox.ac.uk/tabserv.cgi?x=eef89b5a53f266a4936e2305570d7d61WzQmaSN0PTE1OTIwNjc3MzMmcyNkPWRlYXRoJmkjYT00NjQ1MCZpI3I9MTA0NjA3XQ==
+wget -nd -Odeath.txt https://biota.ndph.ox.ac.uk/XXXXXX
 ```
 
