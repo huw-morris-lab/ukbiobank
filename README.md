@@ -69,7 +69,7 @@ export <- data %>%
 		starts_with("53"), #date of baseline assessment
 		starts_with("40023"), #DEATH and DEATH_CAUSE table. count of the number of rows for each participant in the DEATH table.
 		#The DEATH table replicates the information in Field 40000, Field 40018 and Field 40020. The DEATH_CAUSE table replicates the information in Field 40001 and Field 40002
-		#SUPPOSEDLY according to UK Biobank but I have not found this is the case - I download the DEATH and DEATH_CAUSE tables separately as this seems to have more updated information (see below)
+		#SUPPOSEDLY according to UK Biobank but the Data Portal tables are updated more frequently than the main dataset 
 		starts_with("40000"), #date of death
 		starts_with("40007"), #age at death
 		starts_with("40001"), #cause of death primary
@@ -108,8 +108,8 @@ This takes a while (depending on how many variables you are interested in) so I 
 qsub -pe make 2 -cwd ukb_selectFields_script_2020_06_13.R
 ```
 
-# 2. Download death data
-According to UK Biobank, this data should be replicated in the main dataset but I have found that the main clinical dataset is not up to date. I think the DEATH and DEATH_CAUSE tables are updated more regularly than the main clinical dataset.
+# 2. Download death data from the Data Portal
+According to UK Biobank, this data should be replicated in the main dataset but the Data Portal tables are updated more regularly than the main clinical dataset (Showcase Update only two or three times a year).
 
 Further information on how to download mortality data is available in the UK Biobank access guides
 https://biobank.ndph.ox.ac.uk/showcase/showcase/docs/DeathLinkage.pdf
