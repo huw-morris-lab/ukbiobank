@@ -1,4 +1,4 @@
-# ukbiobank_PDsurvivalGWAS
+# PDsurvivalGWAS
 Scripts for running PD progression GWAS of mortality in UKB.
 
 Date: Nov 2020
