@@ -1,0 +1,338 @@
+### Quality control and imputation of UKB genotype data on Michigan server ###
+
+# Created 17/06/2020
+# Updated 17/06/2020
+# Created by: Manuela Tan
+# WD: /data/kronos/mtan/UK_Biobank/data_downloaded_20200613/genotypes/calls
+# Original files: non-imputed PROBAND plink binary files with all individuals, pre-QC
+# QC steps following Steph's QC on Oxford data (see Thesis_Steph_Chap4)
+# Original files: XXXXXX variants and 488,377 individuals
+
+### Rename files ###
+
+	#First rename the fam files to match the name of the bed files
+	sh
+	for CHR in {1..22} 
+	do 
+	mv ukb46450_cal_chr"$CHR"_v2_s488264.fam ukb_cal_chr"$CHR"_v2.fam
+	done
+
+	#Do the same for the sex chromosomes X, XY and Y (excluding mitochondrial)
+	sh
+	for CHR in X XY Y
+	do 
+	mv ukb46450_cal_chr"$CHR"_v2_s488264.fam ukb_cal_chr"$CHR"_v2.fam
+	done
+
+	#Rename the bim files to match the bed files
+	sh
+	for CHR in {1..22}
+	do
+	mv ukb_snp_chr"$CHR"_v2.bim ukb_cal_chr"$CHR"_v2.bim
+	done
+
+	sh
+	for CHR in X XY Y
+	do
+	mv ukb_snp_chr"$CHR"_v2.bim ukb_cal_chr"$CHR"_v2.bim
+	done
+
+### Extract PD cases only ###
+
+	#Before combining all the chromosomes - because these files still have all the participants
+	sh
+	for CHR in {1..22} X XY Y
+	do
+	plink --bfile ukb_cal_chr"$CHR"_v2 \
+	--keep /data/kronos/mtan/UK_Biobank/data_downloaded_20200613/SURVIVAL_GWAS/outputs/UKB_PDcases_IDs.txt \
+	--make-bed \
+	--out ukb_cal_chr"$CHR"_v2.PDcases
+	done
+
+	#2163 individuals remaining
+
+### Merge separate chromosomes ###
+
+	sh
+	for CHR in {1..22} X XY Y
+	do
+	echo ukb_cal_chr"$CHR"_v2.PDcases >> mergelist.txt
+	done
+
+	#Merge all the chromosomes
+	#Need to use my version of plink because the kronos version does not have this option
+	/data/kronos/mtan/software/plink_1-9/plink --merge-list mergelist.txt \
+	--make-bed \
+	--out ukb_cal_v2.PDcases.allchromosomes
+
+	#805161 variants
+	#2163 samples
+	#Total genotyping rate 0.969523
+
+### QC - sample and SNP filtering ###
+
+	#Variant filtering - remove variants with MAF < 1% and genotyping rate < 95%
+	plink --bfile ukb_cal_v2.PDcases.allchromosomes \
+	--geno 0.05 \
+	--maf 0.01 \
+	--make-bed \
+	--out ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01
+
+	#72218 variants removed due to missing genotype data
+	#108657 variants removed due to MAF threshold
+	#0.969523 total genotyping rate
+	#624286 variants remaining
+
+	#Sample filtering - filter by sample genotyping rate and heterozygosity
+	
+	plink --bfile ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01 \
+	--missing \
+	--het \
+	--out ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sampleqc
+	#0.995449 total genotyping rate
+
+	#Plot sample heterozygosity and genotyping rates
+
+	R --vanilla --slave \
+	--args ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sampleqc.imiss ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sampleqc.het imiss_het_plot.pdf < /data/kronos/mtan/QC_Rscripts/sampleqc.R
+
+	#In R - run sampleqc_Rscript.R
+	#Creates text file with samples to remove with FID and IID
+
+	#Remove samples who do not meet call rate (>98%) or heterozygosity (2SDs away from mean) cutoffs
+
+	plink --bfile ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01 \
+	--remove samples_to_remove.txt \
+	--make-bed \
+	--out ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD
+	#2095 individuals remaining
+	#Total genotyping rate 0.995745
+	#68 samples removed
+
+### Sex checking ###
+
+	#The genders are already in the fam file (not sure if these are clinical or genetic genders)
+
+	#Sex checking in plink
+	plink --bfile ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD \
+	--check-sex 0.2 0.7 \
+	--out ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexcheck_results
+
+	#Can open the .sexcheck file in text editor. Check the mismatches. If there are lot, espcially on a plate, then there may have been a problem with the genotyping (plate flip, sample mixup)
+
+	#Write list of samples that pass sexcheck (FID and IID)
+	#If the clinical gender is missing (column 3 is 0) then these samples will still be included in this step
+	#But you should definitely try to get the clinical gender for these samples
+	cat ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexcheck_results.sexcheck | awk '($3=="0" || $5=="OK") {print $1 "\t"$2}' > sex_samples_to_keep.txt
+
+	#Remove sex discordant samples
+	plink --bfile ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD \
+	--keep sex_samples_to_keep.txt \
+	--make-bed \
+	--out ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass
+	#2094 individuals remaining
+	#1 individual removed
+
+### Hardy Weinberg Equilibrium filtering ###
+
+	#Debatable whether you do this filtering step in controls only, not the full dataset. 
+
+	#I have applied this filter when working with PD cases only. It is up to you.
+
+	#Also if you are working with rare variants (e.g. not GWAS), you may not want to apply HWE filters for your rare variants. You could filter for common variants first, then write the list of SNPs that do not meet HWE, and extract these from the full dataset of rare + common variants.
+
+
+	#Generate stats file which shows HWE stats for each SNP (this doesn't filter any variants)
+	plink --bfile ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass \
+	 --hardy \
+	 --out ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass.hwe
+
+	#Filter out variants with HWE p value < 0.00001
+	plink --bfile ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass \
+	--hwe 0.00001 \
+	--make-bed \
+	--out ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass.hwe
+	#98 variants removed
+
+### IBD ###
+
+	#You don't need to do this step if you are doing family-based studies etc.
+
+	#Create pruned list of variants (without restriction on MAF)
+	plink --bfile ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass.hwe \
+	--indep-pairwise 50 5 0.05 \
+	--out ukb.pruned
+
+	#Run IBD only on the pruned SNP list - called prune.in
+	#The min 0.01 means that plink will only output pairs of samples that have PI-HAT > 0.01. You can adjust this if you want to look at samples that are more distantly related
+	#Have changed this from 0.1 because some ukb studies (e.g. Jacobs) use a lower threshold for relatedness filtering
+	plink --bfile ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass.hwe \
+	--extract ukb.pruned.prune.in \
+	--genome \
+	--min 0.01 \
+	--out ukb.IBD
+	#102693 variants used for IBD
+
+	#Write a list of individuals to remove (FID and IID in .txt file)
+
+	#Remove related individuals (pi-hat > 0.1)
+	#This almost matches the UKB relatedness kinship data > 0.0442
+	plink --bfile ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass.hwe \
+	--remove IBD_to_exclude.txt \
+	--make-bed \
+	--out ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass.hwe.IBD_0.1
+	#2090 people remaining
+	#4 people removed
+
+
+### PCA - using pruned SNP list. Only merging with CEU individuals
+
+	#HapMap SNP list is available in /data/kronos/NGS_Reference/HapMap_Reference/
+	#I made a copy of these files in my local directory
+
+	#Extract HapMap SNPs
+	plink --bfile ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass.hwe.IBD_0.1 \
+	--extract /data/kronos/mtan/reference/hapmap/hapmap3r2_CEU.CHB.JPT.YRI.no-at-cg-snps.txt \
+	--make-bed \
+	--out ukb.hapmap_SNPs
+	#123100 variants
+	#Genotyping rate 0.99606
+
+	#Extract CEU individuals from HapMap dataset
+	#Downloaded from https://ftp.ncbi.nlm.nih.gov/hapmap/samples_individuals/relationships_w_pops_121708.txt
+	#I filtered in R to just get the IDs of the CEU individuals from this list
+
+	plink --bfile /data/kronos/mtan/reference/hapmap/hapmap3r2_CEU.CHB.JPT.YRI.founders.no-at-cg-snps \
+	--keep /data/kronos/mtan/reference/hapmap/HapMap_CEU.txt \
+	--make-bed \
+	--out /data/kronos/mtan/reference/hapmap/hapmap3r2_CEU.CHB.JPT.YRI.founders.no-at-cg-snps.CEU_only
+	#112 CEU individuals from HapMap data (not all the individuals in the relationships w pops file are in the binary files)
+
+	#Merge ukb data with HapMap CEU data and extract pruned SNPs
+	plink --bfile ukb.hapmap_SNPs \
+	--bmerge /data/kronos/mtan/reference/hapmap/hapmap3r2_CEU.CHB.JPT.YRI.founders.no-at-cg-snps.CEU_only.bed \
+	/data/kronos/mtan/reference/hapmap/hapmap3r2_CEU.CHB.JPT.YRI.founders.no-at-cg-snps.CEU_only.bim \
+	/data/kronos/mtan/reference/hapmap/hapmap3r2_CEU.CHB.JPT.YRI.founders.no-at-cg-snps.CEU_only.fam \
+	--extract ukb.pruned.prune.in \
+	--make-bed \
+	--out ukb.hapmap_SNPs.CEU_only.merged-pruned
+
+	#At first pass this will come up witth errors for variants with 3+ alleles present
+	#Need to flip missnps
+
+	plink --bfile ukb.hapmap_SNPs \
+	--flip ukb.hapmap_SNPs.CEU_only.merged-pruned-merge.missnp \
+	--make-bed \
+	--out ukb.hapmap_SNPs.CEU_only.flipped_missnps
+	#123100 variants
+	#129 variants flipped
+
+	#Remerge and extract pruned SNPs. Only CEU individuals from HapMap
+	plink --bfile ukb.hapmap_SNPs.CEU_only.flipped_missnps \
+	--bmerge /data/kronos/mtan/reference/hapmap/hapmap3r2_CEU.CHB.JPT.YRI.founders.no-at-cg-snps.CEU_only.bed \
+	/data/kronos/mtan/reference/hapmap/hapmap3r2_CEU.CHB.JPT.YRI.founders.no-at-cg-snps.CEU_only.bim \
+	/data/kronos/mtan/reference/hapmap/hapmap3r2_CEU.CHB.JPT.YRI.founders.no-at-cg-snps.CEU_only.fam \
+	--extract ukb.pruned.prune.in \
+	--make-bed \
+	--out ukb.hapmap_SNPs.CEU_only.flipped_missnps.merged-pruned
+	#17508 variants
+	#Genotyping rate 0.995833.
+	#2202 people (with HapMap CEU samples)
+
+	#Run the PCA in plink, rather than gcta. These come up with similar results
+	plink --bfile ukb.hapmap_SNPs.CEU_only.flipped_missnps.merged-pruned \
+	--pca \
+	--out PCA.plink
+
+	##In R - run PCA_script.R
+	#This makes PCA plots, and writes list of PCA outliers to remove who are >6SD away from the mean of any of the first 10 PCs
+	#Adjust cutoffs if necessary
+
+	plink --bfile ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass.hwe.IBD_0.1 \
+	--remove PCA_outliers.txt \
+	--make-bed \
+	--out ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass.hwe.IBD_0.1.PCA_keep
+	#2068 individuals remaining
+	#22 individuals removed###
+
+
+##FINAL PRE-IMPUTATION
+#624188 variants
+#2068 individuals
+
+
+### PREPARE FOR IMPUTATION ###
+
+	#Run Will Rayne's checking tool
+	wget http://www.well.ox.ac.uk/~wrayner/tools/HRC-1000G-check-bim-v4.2.13.zip
+
+	#Extract files from zip
+	unzip HRC-1000G-check-bim-v4.2.13.zip
+
+	#Get allele frequencies
+	plink --bfile ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass.hwe.IBD_0.1.PCA_keep \
+	--freq \
+	--out ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass.hwe.IBD_0.1.PCA_keep.freq
+
+
+	#Run checking tool
+	#The sites files is available in /data/kronos/NGS_Reference/HRC.r1-1.GRCh37.wgs.mac5.sites.tab
+
+	perl HRC-1000G-check-bim.pl -b ../ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass.hwe.IBD_0.1.PCA_keep.bim -f ../ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass.hwe.IBD_0.1.PCA_keep.freq.frq -r /data/kronos/NGS_Reference/HRC.r1-1.GRCh37.wgs.mac5.sites.tab -h
+
+	Matching to HRC
+
+	Position Matches
+	 ID matches HRC 612142
+	 ID Doesn't match HRC 5069
+	 Total Position Matches 617211
+	ID Match
+	 Position different from HRC 0
+	No Match to HRC 5687
+	Skipped (MT) 1290
+	Total in bim file 624188
+	Total processed 624188
+
+	Indels 0
+
+	SNPs not changed 89144
+	SNPs to change ref alt 524209
+	Strand ok 613352
+	Total Strand ok 613353
+
+	Strand to change 1
+	Total checked 617211
+	Total checked Strand 613353
+	Total removed for allele Frequency diff > 0.2 174
+	Palindromic SNPs with Freq > 0.4 2597
+
+
+	Non Matching alleles 1261
+	ID and allele mismatching 963; where HRC is . 664
+	Duplicates removed 0
+
+	#Run shell script
+	#This is running into errors with real-ref-allele
+	#Try with different version of plink - this may be because the version on kronos is older
+	#Download plink v1.9 into your directory and then edit the shell script to use this version instead
+
+	sh Run-plink-edited.sh
+
+	#This Will Rayne script splits your data into separate chromosomes and makes the VCF files
+
+	#Create sorted vcf.gz file (loop over all chromosomes)
+
+	sh
+	for chr in {1..23}
+	do
+	vcf-sort ukb_cal_v2.PDcases.allchromosomes.geno_0.95.maf_0.01.sample_0.98.het_2SD.sexpass.hwe.IBD_0.1.PCA_keep-updated-chr$chr.vcf | bgzip -c > preimpute_UKB_PD_chr$chr.vcf.gz
+	done
+
+### IMPUTE ON MICHIGAN SERVER ###
+	
+	Ref panel: HRC r1.1 2016
+	rsq filter: OFF
+	Phasing: Eagle v2.4
+	Population: EUR
+	Mode: Quality control and imputation
+	
