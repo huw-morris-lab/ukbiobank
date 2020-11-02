@@ -17,9 +17,17 @@ This creates event and time to event variables and exports files with clinical d
 
 I performed my own QC and imputaton of UKB genotype data, rather than using the existing imputed data. This is because the PD participants may be from a slightly different population from the other UKB participants.
 
+Run UKB_QC_script.txt in plink/R. Upload to Michigan Imputation server or similar.
+
+Run postimput_bcftools_script.sh (I used kronos HPC).
+
+Run postimput_plink_script.sh (I used kronos HPC).
+
+
 # 3. Prepare for GWAS
 
-Run preGWAS_script.txt in plink/R.
+Run preGWAS_script.txt in plink/R. This creates subsets of the genetic dataframe so that the GWAS can run in parallel.
+
 
 # 4. Run GWAS
 
