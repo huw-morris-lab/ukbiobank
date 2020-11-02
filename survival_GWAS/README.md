@@ -31,4 +31,10 @@ Run preGWAS_script.txt in plink/R. This creates subsets of the genetic dataframe
 
 # 4. Run GWAS
 
-In parallel using kronos HPC
+In parallel using kronos HPC.
+
+Run gwas_make_rscripts.sh. This makes the number of R scripts according to the number of subsets of the data.
+
+Run gwas_make_master_qsub.sh. This makes a single sh file with each lie as the qsub command which runs each R script.
+
+Run master_qsub.sh. This submits all the jobs to kronos HPC.
