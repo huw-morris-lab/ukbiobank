@@ -9,7 +9,7 @@ Authors: Manuela Tan
 
 # 1. Process clinical data
 
-Run R script ukb_survival_GWAS_2020_09_18_github.R
+Run R script ukb_clinical.R
 
 This creates event and time to event variables and exports files with clinical data for analysis.
 
