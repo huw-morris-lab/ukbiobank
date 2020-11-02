@@ -115,12 +115,13 @@ Further information on how to download mortality data is available in the UK Bio
 https://biobank.ndph.ox.ac.uk/showcase/showcase/docs/DeathLinkage.pdf
 
 To access the Data Portal
-* When downloading the data, go to the Data Portal tab 
+* Access your project application through the AMS
+* In the Downloads tab (where you downloaded all the other utilities to get the main dataset), go to the Data Portal tab 
 * Connect to Record Repository
 
 You can use SQL to query the tables, or just download the entire tables.
 
-To get the full unique link, go to the Table Download tab and enter the name of the table you want. This will generate the wget commands like the ones below.
+To get the full unique links, go to the Table Download tab and enter the name of the table you want. This will generate the wget commands like the ones below.
 
 Download DEATH table
 ```
