@@ -9,7 +9,15 @@ Authors: Manuela Tan
 
 ## General description and purpose
 
-This covers cleaning UK Biobank clinical data and pulling PD cases. 
+This covers cleaning UK Biobank clinical data and pulling PD cases. This is NOT a guide on how to download the data, detailed instructions have already been provided by UK Biobank. Note that these links and utilities may change/update over time. Refer to the email which says your data is available.
+
+Data showcase to find out about data items that are available: https://biobank.ndph.ox.ac.uk/ukb/index.cgi
+How to download UKB data: https://biobank.ctsu.ox.ac.uk/crystal/exinfo.cgi?src=AccessingData
+How to download genetic data (also linked in the guide above): 
+using ukbgene (older) - https://biobank.ndph.ox.ac.uk/showcase/refer.cgi?id=664
+using gfetch (newer version of download client) - https://biobank.ctsu.ox.ac.uk/showcase/refer.cgi?id=668
+
+Once you have downloaded all the data, follow the steps below (as a guide).
 
 
 # 1. Convert dataset
@@ -61,6 +69,7 @@ export <- data %>%
 		starts_with("53"), #date of baseline assessment
 		starts_with("40023"), #DEATH and DEATH_CAUSE table. count of the number of rows for each participant in the DEATH table.
 		#The DEATH table replicates the information in Field 40000, Field 40018 and Field 40020. The DEATH_CAUSE table replicates the information in Field 40001 and Field 40002
+		#SUPPOSEDLY according to UK Biobank but I have not found this is the case - I download the DEATH and DEATH_CAUSE tables separately as this seems to have more updated information (see below)
 		starts_with("40000"), #date of death
 		starts_with("40007"), #age at death
 		starts_with("40001"), #cause of death primary
@@ -96,5 +105,22 @@ saveRDS(export, "ukb_selectedFields.rds")
 
 This takes a while (depending on how many variables you are interested in) so I run it using the HPC on kronos. 
 ```
-qsub ukb_selectFields_script_2020_06_13.R
+qsub -pe make 2 -cwd ukb_selectFields_script_2020_06_13.R
 ```
+
+# 2. Download death data
+According to UK Biobank, this data should be replicated in the main dataset but I have found that the main clinical dataset is not up to date. I think the DEATH and DEATH_CAUSE tables are updated more regularly than the main clinical dataset.
+
+#When downloading the data, in the Data Portal tab 
+#Connect to Record Repository
+
+Download DEATH table
+```
+wget -nd -Odeath_cause.txt https://biota.ndph.ox.ac.uk/tabserv.cgi?x=1b27d4c5fbfe2d81b0b0ddf0bf85a5feWzQmaSN0PTE1OTIwNjc3NzMmcyNkPWRlYXRoX2NhdXNlJmkjYT00NjQ1MCZpI3I9MTA0NjA3XQ==
+```
+
+Download DEATH_CAUSE table
+```
+wget -nd -Odeath.txt https://biota.ndph.ox.ac.uk/tabserv.cgi?x=eef89b5a53f266a4936e2305570d7d61WzQmaSN0PTE1OTIwNjc3MzMmcyNkPWRlYXRoJmkjYT00NjQ1MCZpI3I9MTA0NjA3XQ==
+```
+
