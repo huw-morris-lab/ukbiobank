@@ -111,8 +111,14 @@ qsub -pe make 2 -cwd ukb_selectFields_script_2020_06_13.R
 # 2. Download death data
 According to UK Biobank, this data should be replicated in the main dataset but I have found that the main clinical dataset is not up to date. I think the DEATH and DEATH_CAUSE tables are updated more regularly than the main clinical dataset.
 
-#When downloading the data, in the Data Portal tab 
-#Connect to Record Repository
+Further information on how to download mortality data is available in the UK Biobank access guides
+https://biobank.ndph.ox.ac.uk/showcase/showcase/docs/DeathLinkage.pdf
+
+You can also use SQL to query these tables:
+* When downloading the data, go to the Data Portal tab 
+* Connect to Record Repository
+
+Here I just downloaded the whole tables.
 
 Download DEATH table
 ```
